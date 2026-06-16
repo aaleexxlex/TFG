@@ -1,204 +1,479 @@
-# Sistema de Monitoreo IoT de Múltiples Fuentes, Fusión Temporal y Detección de Anomalías con Propagación en Grafos para Infraestructuras Críticas
 
-Este repositorio contiene la implementación práctica del **Trabajo de Fin de Grado (TFG)** centrado en el desarrollo de una arquitectura de computación en tres niveles (Edge-Fog-Cloud) para la monitorización de fuentes IoT heterogéneas, fusión temporal de telemetrías, detección híbrida de anomalías y simulación de la propagación de riesgos en grafos de dependencias para infraestructuras críticas.
+# Diseño y desarrollo de un sistema de análisis de amenazas operativas en servicios esenciales mediante Edge Computing y fusión de datos heterogéneos
+
+Este repositorio contiene la implementación práctica de un Trabajo Fin de Grado centrado en el diseño y desarrollo de una arquitectura **Edge--Fog--Cloud** para la monitorización de servicios esenciales urbanos, la fusión temporal de datos heterogéneos, la detección híbrida de anomalías y el análisis de propagación de riesgos mediante grafos de dependencias.
+
+El sistema se aplica al caso de estudio de la **Ciudad de Madrid**, integrando información procedente de fuentes públicas como **DGT**, **Renfe Cercanías**, **AEMET** y **Red Eléctrica de España (REE)**.
 
 ---
 
-## 1. Descripción General de la Arquitectura
+## Descripción general
 
-El sistema implementa una topología de procesamiento jerárquico dividida en tres capas principales (**Edge, Fog, Cloud**), junto con un simulador de sensores y un cuadro de mando interactivo:
+El prototipo permite:
+
+- Adquirir datos de distintas fuentes públicas.
+- Publicar telemetría mediante MQTT.
+- Fusionar observaciones heterogéneas en la capa Edge.
+- Aplicar detección preliminar mediante reglas heurísticas.
+- Ejecutar inferencia mediante un modelo de aprendizaje automático en la capa Fog.
+- Analizar la criticidad mediante un grafo de dependencias entre servicios esenciales.
+- Almacenar resultados en InfluxDB.
+- Visualizar métricas y alertas mediante Grafana.
+- Simular escenarios de riesgo mediante una aplicación interactiva basada en grafos.
+
+La arquitectura se organiza en tres capas principales:
+
+- **Edge**: adquisición, validación, fusión temporal y detección preliminar.
+- **Fog**: inferencia, fusión de decisión, análisis de criticidad y persistencia operacional.
+- **Cloud**: histórico de observaciones y reentrenamiento periódico del modelo.
+
+---
+
+## Arquitectura del sistema
 
 ```mermaid
 graph TD
-    %% Fuentes de Datos y Simulación
-    subgraph Fuentes de Datos (MQTT Bridge)
-        AEMET[AEMET API / Clima] -->|MQTT| Broker[Broker MQTT - Mosquitto]
-        REE[REE API / Red Eléctrica] -->|MQTT| Broker
-        DGT[DGT NAP / Tráfico] -->|MQTT| Broker
-        RENFE[RENFE GTFS-RT / Trenes] -->|MQTT| Broker
+    subgraph Fuentes de datos
+        DGT[DGT / Tráfico] --> Broker[Broker MQTT - Mosquitto]
+        RENFE[Renfe / Cercanías] --> Broker
+        AEMET[AEMET / Meteorología] --> Broker
+        REE[REE / Energía] --> Broker
     end
 
-    %% Capa Edge
-    subgraph Capa Edge (Borde)
-        Broker -->|Suscripción| Edge[edge/main.py]
-        Edge -->|Fusión Temporal| Buffer[TelemetryFusionBuffer]
-        Edge -->|Detección por Reglas| BaseDet[Rule-based Detector]
-        Edge -->|Observación Fusionada y Alertas| Broker
+    subgraph Edge
+        Broker --> EdgeNode[edge/main.py]
+        EdgeNode --> Fusion[TelemetryFusionBuffer]
+        EdgeNode --> Rules[Detector basado en reglas]
+        EdgeNode --> Broker
     end
 
-    %% Capa Fog
-    subgraph Capa Fog (Niebla)
-        Broker -->|Suscripción| Fog[fog/main.py]
-        Fog -->|Inferencia ML| RandomForest[RandomForestRegressor]
-        Fog -->|Fusión de Decisión| Decision[fuse_rule_and_ml]
-        Fog -->|Propagación en Grafo| GraphEngine[shared/critical_infra.py]
-        
-        %% Persistencia
-        Decision -->|Escritura| Influx[(InfluxDB)]
-        GraphEngine -->|Estado en Tiempo Real| JSONState[latest_graph_state.json]
+    subgraph Fog
+        Broker --> FogNode[fog/main.py]
+        FogNode --> ML[RandomForestRegressor]
+        FogNode --> Decision[Fusión reglas + ML]
+        FogNode --> Graph[Grafo de dependencias]
+        Decision --> Influx[(InfluxDB)]
+        Graph --> State[latest_graph_state.json]
     end
 
-    %% Capa Cloud
-    subgraph Capa Cloud (Nube)
-        CSVData[(data/fused_clean.csv)] -->|Monitoreo| Cloud[cloud/continuous_training.py]
-        Cloud -->|Reentrenamiento Auto| CloudTrain[cloud/training/train_model.py]
-        CloudTrain -->|Guardar Modelo| Registry[Model Registry]
-        Registry -->|latest_model.joblib| RandomForest
+    subgraph Cloud
+        CSV[(data/fused_clean.csv)] --> Training[cloud/continuous_training.py]
+        Training --> Model[models/latest_model.joblib]
+        Model --> ML
     end
 
-    %% Visualización
     subgraph Visualización
-        JSONState -->|Lectura| StreamlitApp[visualization/graph_propagation_app.py]
-        Influx -->|Dashboard| Grafana[Grafana Dashboard]
+        Influx --> Grafana[Grafana]
+        State --> Streamlit[Streamlit Graph App]
     end
+````
 
-    classDef edgeStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    classDef fogStyle fill:#efebe9,stroke:#5d4037,stroke-width:2px;
-    classDef cloudStyle fill:#ede7f6,stroke:#5e35b1,stroke-width:2px;
-    classDef sourceStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef visStyle fill:#fff8e1,stroke:#ffa000,stroke-width:2px;
-    
-    class Edge,Buffer,BaseDet edgeStyle;
-    class Fog,RandomForest,Decision,GraphEngine,Influx,JSONState fogStyle;
-    class Cloud,CloudTrain,Registry,CSVData cloudStyle;
-    class AEMET,REE,DGT,RENFE,Broker sourceStyle;
-    class StreamlitApp,Grafana visStyle;
+---
+
+## Estructura del proyecto
+
+```text
+.
+├── cloud/
+│   ├── continuous_training.py
+│   ├── training/
+│   │   └── train_model.py
+│   └── model_registry/
+│       └── registry.py
+│
+├── data/
+│   ├── fused_observations.csv
+│   ├── fused_clean.csv
+│   └── latest_graph_state.json
+│
+├── edge/
+│   ├── main.py
+│   ├── telemetry_fusion.py
+│   ├── detector.py
+│   └── fused_storage.py
+│
+├── fog/
+│   ├── main.py
+│   └── services/
+│       ├── inference.py
+│       ├── decision_fusion.py
+│       └── influx_writer.py
+│
+├── models/
+│   ├── latest_model.joblib
+│   └── metadata.json
+│
+├── mqtt_bridge/
+│   └── publisher.py
+│
+├── shared/
+│   ├── config.py
+│   ├── schemas.py
+│   └── critical_infra.py
+│
+├── visualization/
+│   └── graph_propagation_app.py
+│
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 2. Descripción de las Capas y Componentes
+## Componentes principales
 
-### 2.1 Capa Edge (`edge/`)
-* **`telemetry_fusion.py`**: Implementa un buffer de alineación temporal (`TelemetryFusionBuffer`). Permite unificar eventos de transporte de alta frecuencia (DGT, RENFE) con datos meteorológicos (AEMET) y del sector eléctrico (REE) que tienen mayores tiempos de actualización, controlando la validez de los datos mediante un delta temporal ajustable (definido en $3600$ segundos).
-* **`detector.py`**: Realiza una detección de anomalías preliminar basada en reglas fijas sobre los contadores e incidencias agregadas, arrojando una primera métrica de criticidad y publicando una alerta local en el topic `alerts/anomaly` si los umbrales son superados.
-* **`fused_storage.py`**: Almacena las observaciones fusionadas localmente en `data/fused_observations.csv` de forma selectiva para evitar redundancia de datos duplicados y optimizar espacio.
+### Capa Edge
 
-### 2.2 Capa Fog (`fog/`)
-* **`main.py`**: Consume las observaciones del Edge, ejecuta inferencia de Machine Learning, procesa el grafo de infraestructuras críticas y escribe en InfluxDB.
-* **`services/inference.py`**: Carga el modelo RandomForestRegressor entrenado en la nube. Si no existe ningún modelo disponible aún, entra en modo de contingencia ejecutando lógica basada únicamente en reglas.
-* **`services/decision_fusion.py`**: Combina la salida del detector del Edge (reglas) y la inferencia del modelo (ML) mediante una ponderación híbrida:
-  $$\text{Score Final} = (0.6 \times \text{Score Reglas}) + (0.4 \times \text{Score ML})$$
-* **`services/influx_writer.py`**: Escribe las métricas finales (anomalías, scores, variables meteorológicas, de transporte y eléctricas) en **InfluxDB** bajo la medición `anomalies`.
+La capa Edge recibe la telemetría publicada en MQTT, valida los mensajes, agrupa las observaciones recientes y genera una observación fusionada.
 
-### 2.3 Capa Cloud (`cloud/`)
-* **`continuous_training.py`**: Monitoriza en segundo plano el archivo de datos históricos (`fused_clean.csv`). Si se detectan más de $30$ nuevas observaciones desde el último entrenamiento, activa automáticamente el pipeline de reentrenamiento.
-* **`training/train_model.py`**: Entrena un modelo **RandomForestRegressor** (200 estimadores, profundidad máxima 10) usando como etiquetas el score de anomalía calculado históricamente, evaluando métricas como MAE, RMSE y $R^2$.
-* **`model_registry/registry.py`**: Gestiona el almacenamiento de modelos guardándolos en `models/latest_model.joblib` junto con sus metadatos (features utilizadas, puntuaciones del modelo, fecha de entrenamiento, etc.) en `metadata.json`.
+Componentes principales:
 
-### 2.4 Visualización (`visualization/`)
-* **`graph_propagation_app.py`**: Aplicación web interactiva desarrollada en **Streamlit** que utiliza **NetworkX** y **PyVis** para representar y animar en tiempo real el flujo de propagación de fallos dentro de la red de infraestructuras críticas. Permite simular escenarios teóricos y ver el estado real consumido de `data/latest_graph_state.json`.
+* `edge/main.py`: nodo principal de la capa Edge.
+* `edge/telemetry_fusion.py`: buffer de fusión temporal de datos.
+* `edge/detector.py`: detección preliminar basada en reglas heurísticas.
+* `edge/fused_storage.py`: almacenamiento local de observaciones fusionadas.
+
+Esta capa permite combinar datos rápidos de movilidad, como DGT y Renfe, con fuentes contextuales de actualización más lenta, como AEMET y REE.
 
 ---
 
-## 3. Lógica del Grafo de Dependencias e Infraestructuras Críticas
+### Capa Fog
 
-El modelo representa la interdependencia entre 9 sectores clave:
+La capa Fog consume las observaciones fusionadas generadas por el Edge y realiza el análisis principal del sistema.
+
+Componentes principales:
+
+* `fog/main.py`: nodo principal de la capa Fog.
+* `fog/services/inference.py`: carga y ejecución del modelo de aprendizaje automático.
+* `fog/services/decision_fusion.py`: combinación entre reglas heurísticas y modelo ML.
+* `fog/services/influx_writer.py`: escritura de resultados en InfluxDB.
+* `shared/critical_infra.py`: análisis de criticidad mediante grafo de dependencias.
+
+La decisión final combina el score basado en reglas y el score estimado por el modelo:
+
+```text
+final_score = 0.60 * rule_score + 0.40 * ml_score
+```
+
+---
+
+### Capa Cloud
+
+La capa Cloud se encarga de gestionar el histórico de observaciones y de realizar el reentrenamiento periódico del modelo.
+
+Componentes principales:
+
+* `cloud/continuous_training.py`: supervisa el histórico de datos y lanza el reentrenamiento cuando existen suficientes muestras nuevas.
+* `cloud/training/train_model.py`: entrena un modelo `RandomForestRegressor`.
+* `cloud/model_registry/registry.py`: guarda el modelo entrenado y sus metadatos.
+
+El modelo se almacena como:
+
+```text
+models/latest_model.joblib
+```
+
+---
+
+### Visualización
+
+El sistema incorpora dos mecanismos de visualización:
+
+* **Grafana**: dashboard operacional para visualizar scores, anomalías, severidad, telemetría de entrada y decisiones recientes.
+* **Streamlit + NetworkX + PyVis**: aplicación interactiva para analizar el grafo de dependencias y simular escenarios de propagación de riesgo.
+
+La aplicación del grafo se ejecuta con:
+
+```bash
+streamlit run visualization/graph_propagation_app.py
+```
+
+---
+
+## Grafo de dependencias
+
+El sistema modela las relaciones funcionales entre distintos servicios esenciales mediante un grafo dirigido.
+
+Servicios representados:
+
+* Energía
+* Meteorología
+* Movilidad por carretera
+* Movilidad ferroviaria
+* Movilidad urbana
+* Telecomunicaciones
+* Hospitales
+* Emergencias
+* Logística
+
+Ejemplo simplificado:
 
 ```mermaid
 graph LR
-    meteorologia[Meteorología] --> movilidad_carretera[Movilidad Carretera]
-    meteorologia --> movilidad_ferroviaria[Movilidad Ferroviaria]
+    meteorologia[Meteorología] --> movilidad_carretera[Movilidad carretera]
+    meteorologia --> movilidad_ferroviaria[Movilidad ferroviaria]
+
     energia[Energía] --> movilidad_ferroviaria
     energia --> telecomunicaciones[Telecomunicaciones]
     energia --> hospitales[Hospitales]
     energia --> emergencias[Emergencias]
     energia --> logistica[Logística]
-    
-    movilidad_carretera --> movilidad_urbana[Movilidad Urbana]
+
+    movilidad_carretera --> movilidad_urbana[Movilidad urbana]
     movilidad_ferroviaria --> movilidad_urbana
-    movilidad_ferroviaria --> logistica
     movilidad_carretera --> logistica
-    
+    movilidad_ferroviaria --> logistica
+
     movilidad_urbana --> hospitales
     movilidad_urbana --> emergencias
     telecomunicaciones --> hospitales
     telecomunicaciones --> emergencias
-
-    style hospitales fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px;
-    style emergencias fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px;
-    style telecomunicaciones fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
-    style energia fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
 ```
 
-### 3.1 Fórmula de Propagación
-El riesgo o estado de fallo intrínseco de cada nodo ($state\_score$) se calcula según las telemetrías del sistema (p. ej., número de incidentes de DGT para carretera, generación eléctrica para energía, etc.). 
+El grafo permite estimar:
 
-Si un nodo depende de otros, hereda su riesgo de forma atenuada:
-$$\text{Riesgo Heredado} = \frac{1}{|D|} \sum_{d \in D} \text{Score Final}_d$$
-
-El **Score Final** de cada nodo tras propagar el impacto se define como:
-$$\text{Score Final} = \text{clamp}(0.70 \times \text{Score Propio} + 0.30 \times (0.55 \times \text{Riesgo Heredado}))$$
-
-### 3.2 Métricas Globales
-* **Score de Grafo Global (`graph_score`):** Suma ponderada según los pesos base de cada nodo:
-  $$\text{Global Score} = \frac{\sum (w_i \times \text{Score Final}_i)}{\sum w_i}$$
-* **Score de Criticidad (`criticality_score`):** Nivel de riesgo promedio de los tres nodos más críticos del sistema: Hospitales, Emergencias y Telecomunicaciones.
-* **Nodo Dominante (`dominant_node`):** Aquel nodo con el score final más elevado en la propagación, indicando la raíz principal de impacto en el ecosistema.
+* Riesgo propio de cada nodo.
+* Riesgo propagado desde nodos dependientes.
+* Riesgo final por servicio.
+* Score global del grafo.
+* Índice de criticidad.
+* Nodo dominante de la perturbación.
 
 ---
 
-## 4. Requisitos e Instalación
+## Requisitos
 
-### 4.1 Requisitos de Software
+### Software necesario
+
 * Python 3.9 o superior
-* Docker y Docker Compose (para Mosquitto, InfluxDB y Grafana)
+* Docker
+* Docker Compose
+* Git
 
-### 4.2 Instalación de Dependencias Python
-Instala todas las librerías necesarias con el archivo `requirements.txt`:
+### Servicios desplegados con Docker
+
+El archivo `docker-compose.yml` levanta los siguientes servicios:
+
+* Mosquitto MQTT Broker
+* InfluxDB v2
+* Grafana
+
+---
+
+## Instalación
+
+Clonar el repositorio:
+
+```bash
+git clone https://github.com/tu-usuario/tu-repositorio.git
+cd tu-repositorio
+```
+
+Crear y activar un entorno virtual:
+
+```bash
+python -m venv venv
+```
+
+En Linux/macOS:
+
+```bash
+source venv/bin/activate
+```
+
+En Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+Instalar dependencias:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## 5. Puesta en Marcha del Sistema
+## Configuración
 
-### Paso 1: Levantar la Infraestructura Docker
-Inicia el broker de mensajería MQTT (Mosquitto) y las bases de datos:
+Crear un archivo `.env` en la raíz del proyecto:
+
+```env
+AEMET_API_KEY=tu_api_key_aqui
+
+MQTT_BROKER=localhost
+MQTT_PORT=1883
+
+INFLUXDB_URL=http://localhost:8086
+INFLUXDB_TOKEN=tfg-token
+INFLUXDB_ORG=tfg
+INFLUXDB_BUCKET=fog_data
+```
+
+> Nota: los nombres exactos de las variables pueden adaptarse a la configuración definida en `shared/config.py`.
+
+---
+
+## Puesta en marcha
+
+### 1. Levantar la infraestructura
+
 ```bash
 docker compose up -d
 ```
-Esto levantará:
-* **MQTT Broker (Mosquitto)** en el puerto `1883`
-* **InfluxDB v2** en el puerto `8086` (Org: `tfg`, Bucket: `fog_data`, Token: `tfg-token`)
-* **Grafana** en el puerto `3000`
 
-### Paso 2: Crear el archivo `.env`
-Crea un archivo `.env` en la raíz del proyecto para definir tu clave de la API de AEMET:
-```env
-AEMET_API_KEY=tu_api_key_aqui
+Servicios disponibles:
+
+* MQTT Broker: `localhost:1883`
+* InfluxDB: `http://localhost:8086`
+* Grafana: `http://localhost:3000`
+
+---
+
+### 2. Lanzar el publicador de telemetría
+
+```bash
+python -m mqtt_bridge.publisher
 ```
 
-### Paso 3: Lanzar los Servicios
-Para ejecutar el sistema completo en tiempo real, ejecuta cada uno de los siguientes scripts en terminales independientes:
+Este módulo publica en MQTT los datos procedentes de las fuentes configuradas.
 
-1. **Lanzar el Puente MQTT / Publicador de Telemetría (Simulador):**
-   *Este servicio simula el envío periódico de datos obtenidos de las APIs reales hacia MQTT.*
-   ```bash
-   python -m mqtt_bridge.publisher
-   ```
+---
 
-2. **Lanzar el Nodo Edge:**
-   *Recibe datos raw, gestiona el buffer temporal y publica observaciones fusionadas.*
-   ```bash
-   python -m edge.main
-   ```
+### 3. Lanzar el nodo Edge
 
-3. **Lanzar el Nodo Fog:**
-   *Consume observaciones, ejecuta ML, propaga riesgos en el grafo y escribe en InfluxDB.*
-   ```bash
-   python -m fog.main
-   ```
+```bash
+python -m edge.main
+```
 
-4. **Lanzar el Servicio de Entrenamiento en la Nube (Cloud):**
-   *Supervisa el crecimiento del CSV de datos limpios y reentrena el modelo RandomForest.*
-   ```bash
-   python -m cloud.continuous_training
-   ```
+El nodo Edge consume telemetría, realiza la fusión temporal y publica observaciones fusionadas.
 
-5. **Lanzar el Dashboard de Visualización (Streamlit):**
-   *Abre el panel interactivo del grafo de propagación en tu navegador.*
-   ```bash
-   streamlit run visualization/graph_propagation_app.py
-   ```
+---
+
+### 4. Lanzar el nodo Fog
+
+```bash
+python -m fog.main
+```
+
+El nodo Fog consume observaciones fusionadas, ejecuta inferencia, calcula criticidad y escribe resultados en InfluxDB.
+
+---
+
+### 5. Lanzar el servicio Cloud
+
+```bash
+python -m cloud.continuous_training
+```
+
+Este proceso supervisa el histórico de observaciones y ejecuta el reentrenamiento periódico del modelo cuando se cumplen las condiciones definidas.
+
+---
+
+### 6. Lanzar la aplicación interactiva del grafo
+
+```bash
+streamlit run visualization/graph_propagation_app.py
+```
+
+---
+
+## Topics MQTT principales
+
+| Topic                     | Descripción                                 |
+| ------------------------- | ------------------------------------------- |
+| `telemetry/dgt`           | Telemetría de incidencias de tráfico        |
+| `telemetry/renfe`         | Telemetría ferroviaria                      |
+| `telemetry/aemet`         | Telemetría meteorológica                    |
+| `telemetry/ree`           | Telemetría energética                       |
+| `edge/fused_observations` | Observaciones fusionadas generadas por Edge |
+| `alerts/anomaly`          | Alertas preliminares generadas por reglas   |
+| `alerts/final`            | Decisiones finales generadas por Fog        |
+
+---
+
+## Modelo de aprendizaje automático
+
+El sistema utiliza un modelo `RandomForestRegressor` para estimar el score de riesgo a partir de las variables fusionadas.
+
+El modelo se entrena a partir del histórico de observaciones limpias almacenado en:
+
+```text
+data/fused_clean.csv
+```
+
+Las métricas principales utilizadas durante la evaluación son:
+
+* MAE
+* RMSE
+* R²
+
+Si no existe un modelo disponible, la capa Fog puede continuar funcionando en modo de contingencia utilizando únicamente la salida basada en reglas.
+
+---
+
+## Simulación de escenarios
+
+El sistema permite simular escenarios de riesgo mediante mensajes MQTT sintéticos y mediante la aplicación interactiva del grafo.
+
+Escenarios considerados:
+
+* Anomalía en movilidad.
+* Perturbación energética.
+* Condiciones meteorológicas adversas.
+
+Estos escenarios no representan predicciones exactas de incidentes reales, sino casos de prueba controlados para comprobar el comportamiento funcional del sistema.
+
+---
+
+## Dashboard de Grafana
+
+Grafana permite visualizar:
+
+* Score basado en reglas.
+* Score estimado por el modelo.
+* Score final consolidado.
+* Estado de anomalía.
+* Severidad.
+* Nodo dominante.
+* Score global del grafo.
+* Índice de criticidad.
+* Telemetría de entrada.
+* Decisiones recientes.
+
+---
+
+## Tecnologías utilizadas
+
+* Python
+* MQTT / Mosquitto
+* Docker / Docker Compose
+* InfluxDB
+* Grafana
+* Streamlit
+* NetworkX
+* PyVis
+* Pandas
+* NumPy
+* Scikit-learn
+* Joblib
+* Pydantic
+
+---
+
+## Limitaciones
+
+Este proyecto es un prototipo académico ejecutado en un entorno local controlado. Por tanto, no incluye todos los elementos necesarios para un despliegue en producción, como alta disponibilidad, autenticación avanzada, tolerancia a fallos, balanceo de carga o monitorización distribuida real.
+
+Además, algunos escenarios son sintéticos y están diseñados para comprobar el funcionamiento del sistema, no para realizar predicciones probabilísticas de incidentes reales.
+
+---
+
+## Autor
+
+**Alejandro García Ramírez**
+Trabajo Fin de Grado
+Grado en Ingeniería de Tecnologías y Servicios de Telecomunicación
+Universidad Politécnica de Madrid
