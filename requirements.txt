@@ -5,3 +5,7 @@ streamlit
 networkx
 pyvis
 pandas
+numpy
+scikit-learn
+joblib
+influxdb-client
