@@ -1,0 +1,7 @@
+pydantic
+requests
+paho-mqtt
+streamlit
+networkx
+pyvis
+pandas

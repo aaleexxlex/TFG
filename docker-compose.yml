@@ -1,0 +1,40 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: tfg-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./fog/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2
+    container_name: tfg-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin123
+      DOCKER_INFLUXDB_INIT_ORG: tfg
+      DOCKER_INFLUXDB_INIT_BUCKET: fog_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: tfg-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    container_name: tfg-grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+volumes:
+  influxdb_data:
+  grafana_data:

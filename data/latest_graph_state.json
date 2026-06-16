@@ -1,0 +1,175 @@
+{
+  "source": "fog",
+  "generated_at": "2026-06-15T15:40:27.006674+00:00",
+  "timestamp": "2026-06-15 15:40:19.202459+00:00",
+  "target_area": null,
+  "location": "madrid_road_network",
+  "base_scores": {
+    "energia": 0.0,
+    "meteorologia": 0.0,
+    "movilidad_carretera": 0.91,
+    "movilidad_ferroviaria": 1.0,
+    "movilidad_urbana": 0.955,
+    "telecomunicaciones": 0.0,
+    "hospitales": 0.334,
+    "emergencias": 0.43,
+    "logistica": 0.714
+  },
+  "node_scores": {
+    "energia": {
+      "state_score": 0.0,
+      "propagated_score": 0.0,
+      "final_score": 0.0,
+      "base_weight": 1.0,
+      "depends_on": []
+    },
+    "meteorologia": {
+      "state_score": 0.0,
+      "propagated_score": 0.0,
+      "final_score": 0.0,
+      "base_weight": 0.7,
+      "depends_on": []
+    },
+    "movilidad_carretera": {
+      "state_score": 0.91,
+      "propagated_score": 0.0,
+      "final_score": 0.637,
+      "base_weight": 0.95,
+      "depends_on": [
+        "meteorologia"
+      ]
+    },
+    "movilidad_ferroviaria": {
+      "state_score": 1.0,
+      "propagated_score": 0.0,
+      "final_score": 0.7,
+      "base_weight": 1.0,
+      "depends_on": [
+        "energia",
+        "meteorologia"
+      ]
+    },
+    "movilidad_urbana": {
+      "state_score": 0.955,
+      "propagated_score": 0.368,
+      "final_score": 0.779,
+      "base_weight": 1.05,
+      "depends_on": [
+        "movilidad_carretera",
+        "movilidad_ferroviaria"
+      ]
+    },
+    "telecomunicaciones": {
+      "state_score": 0.0,
+      "propagated_score": 0.0,
+      "final_score": 0.0,
+      "base_weight": 1.1,
+      "depends_on": [
+        "energia"
+      ]
+    },
+    "hospitales": {
+      "state_score": 0.334,
+      "propagated_score": 0.143,
+      "final_score": 0.277,
+      "base_weight": 1.3,
+      "depends_on": [
+        "energia",
+        "movilidad_urbana",
+        "telecomunicaciones"
+      ]
+    },
+    "emergencias": {
+      "state_score": 0.43,
+      "propagated_score": 0.143,
+      "final_score": 0.344,
+      "base_weight": 1.25,
+      "depends_on": [
+        "energia",
+        "movilidad_urbana",
+        "telecomunicaciones"
+      ]
+    },
+    "logistica": {
+      "state_score": 0.714,
+      "propagated_score": 0.245,
+      "final_score": 0.573,
+      "base_weight": 0.85,
+      "depends_on": [
+        "movilidad_carretera",
+        "movilidad_ferroviaria",
+        "energia"
+      ]
+    }
+  },
+  "graph_score": 0.37,
+  "global_graph_score": 0.37,
+  "criticality_score": 0.207,
+  "dominant_node": "movilidad_urbana",
+  "rule_score": 1.0,
+  "ml_score": 0.8269901684163058,
+  "final_score": 0.9307960673665223,
+  "final_severity": "critical",
+  "final_anomaly": true,
+  "decision_mode": "hybrid_rules_ml",
+  "features": {
+    "dgt_incident_count": 135,
+    "dgt_severity_low_count": 5,
+    "dgt_severity_medium_count": 18,
+    "dgt_severity_high_count": 22,
+    "dgt_severity_highest_count": 2,
+    "dgt_severity_unknown_count": 88,
+    "dgt_validity_active_count": 135,
+    "dgt_probability_certain_count": 130,
+    "dgt_missing_location_info_count": 0,
+    "dgt_skipped_outside_madrid_count": 520,
+    "dgt_affected_municipality_count": 54,
+    "dgt_affected_road_count": 68,
+    "dgt_type_sit_RoadOrCarriagewayOrLaneManagement_count": 70,
+    "dgt_type_sit_SpeedManagement_count": 8,
+    "dgt_type_sit_GenericSituationRecord_count": 42,
+    "dgt_type_sit_AbnormalTraffic_count": 15,
+    "renfe_incident_count": 48,
+    "renfe_affected_route_count": 260,
+    "renfe_affected_line_count": 9,
+    "renfe_accessibility_alert_count": 12,
+    "renfe_bus_service_alert_count": 8,
+    "renfe_infrastructure_alert_count": 35,
+    "renfe_service_cut_alert_count": 10,
+    "renfe_trip_update_count": 20,
+    "renfe_delayed_trip_count": 14,
+    "renfe_cancelled_trip_count": 6,
+    "renfe_added_trip_count": 0,
+    "renfe_affected_stop_count": 25,
+    "renfe_mean_delay_seconds": 720.0,
+    "renfe_max_delay_seconds": 1800,
+    "renfe_skipped_non_madrid_alerts": 15,
+    "renfe_skipped_non_madrid_trip_updates": 180,
+    "renfe_matched_lines_alerts": [
+      "C1",
+      "C2",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "C8",
+      "C9",
+      "C10"
+    ],
+    "renfe_matched_lines_trip_updates": [
+      "C2",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "C8"
+    ],
+    "aemet_temperature": 31.8,
+    "aemet_humidity": 28.0,
+    "aemet_pressure": 939.2,
+    "aemet_precipitation": 0.0,
+    "aemet_wind_speed": 2.4,
+    "ree_wind_generation": 36000.0,
+    "ree_solar_generation": 118000.0
+  }
+}
