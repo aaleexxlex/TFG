@@ -332,17 +332,7 @@ Servicios disponibles:
 
 ---
 
-### 2. Lanzar el publicador de telemetría
-
-```bash
-python -m mqtt_bridge.publisher
-```
-
-Este módulo publica en MQTT los datos procedentes de las fuentes configuradas.
-
----
-
-### 3. Lanzar el nodo Edge
+### 2. Lanzar el nodo Edge
 
 ```bash
 python -m edge.main
@@ -352,7 +342,7 @@ El nodo Edge consume telemetría, realiza la fusión temporal y publica observac
 
 ---
 
-### 4. Lanzar el nodo Fog
+### 3. Lanzar el nodo Fog
 
 ```bash
 python -m fog.main
@@ -361,8 +351,20 @@ python -m fog.main
 El nodo Fog consume observaciones fusionadas, ejecuta inferencia, calcula criticidad y escribe resultados en InfluxDB.
 
 ---
+### 5. Lanzar los clientes
 
-### 5. Lanzar el servicio Cloud
+```bash
+python -m data_sources.ree_client
+python -m data_sources.aemet_client   
+python -m data_sources.renfe_client
+python -m data_sources.dgt_client   
+```
+
+Este módulo publica en MQTT los datos procedentes de las fuentes configuradas.
+
+---
+
+### 6. Lanzar el servicio Cloud
 
 ```bash
 python -m cloud.continuous_training
@@ -372,10 +374,20 @@ Este proceso supervisa el histórico de observaciones y ejecuta el reentrenamien
 
 ---
 
-### 6. Lanzar la aplicación interactiva del grafo
+### 7. Lanzar la aplicación interactiva del grafo
 
 ```bash
 streamlit run visualization/graph_propagation_app.py
+```
+
+---
+### 8. Lanzar Telemetría Sintética
+
+```bash
+python mqtt_bridge/test_publish_ree.py
+python mqtt_bridge/test_publish_aemet.py  
+python mqtt_bridge/test_publish_renfe.py  
+python mqtt_bridge/test_publish_dgt.py  
 ```
 
 ---
