@@ -1,6 +1,6 @@
 {
-  "trained_at": "2026-06-14T17:07:32.431779",
-  "num_rows": 482,
+  "trained_at": "2026-06-17T16:14:40.420574",
+  "num_rows": 495,
   "num_features": 11,
   "model_type": "RandomForestRegressor",
   "target": "score",
@@ -19,9 +19,9 @@
     "fusion_quality"
   ],
   "metrics": {
-    "mae": 0.005666346706011875,
-    "rmse": 0.012119070739272911,
-    "r2": 0.9866886901097762,
+    "mae": 0.007634410803414128,
+    "rmse": 0.016673229043924664,
+    "r2": 0.9747323716842511,
     "target": "score",
     "task": "regression",
     "model_type": "RandomForestRegressor"

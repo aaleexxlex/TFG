@@ -1,4 +1,5 @@
 import pandas as pd
+from edge.fused_storage import FusedObservationStorage
 
 SEVERITY_MAP = {
     "low": 0,
@@ -18,25 +19,28 @@ FUSION_QUALITY_MAP = {
 def clean_csv(input_path, output_path):
     df = pd.read_csv(input_path, header=None)
 
+    # Assign correct column names from the official storage scheme
+    df.columns = FusedObservationStorage.FIELDNAMES[:len(df.columns)]
+
     clean_df = pd.DataFrame({
-        "dgt_incidents": df.iloc[:, 21],
-        "dgt_severity_high": df.iloc[:, 19],
-        "dgt_severity_highest": df.iloc[:, 20],
+        "dgt_incidents": df["dgt_incident_count"],
+        "dgt_severity_high": df["dgt_severity_high_count"],
+        "dgt_severity_highest": df["dgt_severity_highest_count"],
 
-        "renfe_alerts": df.iloc[:, 32],
-        "renfe_lines_affected": df.iloc[:, 33],
+        "renfe_alerts": df["renfe_incident_count"],
+        "renfe_lines_affected": df["renfe_affected_line_count"],
 
-        "aemet_temp": df.iloc[:, 50],
-        "aemet_wind": df.iloc[:, 51],
-        "aemet_rain": df.iloc[:, 52],
+        "aemet_temp": df["aemet_temperature"],
+        "aemet_wind": df["aemet_wind_speed"],
+        "aemet_rain": df["aemet_precipitation"],
 
-        "ree_demand": df.iloc[:, 55],
-        "ree_wind": df.iloc[:, 56],
+        "ree_demand": 0.0,  # ree_demand doesn't exist in saved features; default to 0.0
+        "ree_wind": df["ree_wind_generation"],
 
-        "fusion_quality": df.iloc[:, 3],
-        "rules_score": df.iloc[:, 58],
-        "score": df.iloc[:, 58],
-        "severity": df.iloc[:, 59],
+        "fusion_quality": df["fusion_quality"],
+        "rules_score": df["score"],
+        "score": df["score"],
+        "severity": df["severity"],
     })
 
     clean_df["fusion_quality"] = (
@@ -58,4 +62,4 @@ def clean_csv(input_path, output_path):
 
     print(f"[ML] CSV limpio generado en {output_path}")
     print(f"[ML] Filas: {len(clean_df)}")
-    print(f"[ML] Score únicos: {clean_df['score'].nunique()}")
+    print(f"[ML] Score únicos: {clean_df['score'].nunique()}")
